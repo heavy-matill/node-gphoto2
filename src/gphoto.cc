@@ -52,7 +52,7 @@ NAN_MODULE_INIT(GPhoto2::Initialize) {
   Nan::SetPrototypeMethod(tpl, "list", List);
   Nan::SetPrototypeMethod(tpl, "setLogLevel", SetLogLevel);
 
-  constructor.Reset(tpl->GetFunction());
+  constructor.Reset(tpl->GetFunction(Nan::GetCurrentContext()).ToLocalChecked());
 
   Nan::Set(target, Nan::New("GPhoto2").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 }

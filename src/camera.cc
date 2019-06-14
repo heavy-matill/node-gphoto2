@@ -40,7 +40,7 @@ NAN_MODULE_INIT(GPCamera::Initialize) {
   Nan::SetPrototypeMethod(tpl, "takePicture", TakePicture);
   Nan::SetPrototypeMethod(tpl, "downloadPicture", DownloadPicture);
 
-  constructor.Reset(tpl->GetFunction());
+  constructor.Reset(tpl->GetFunction(Nan::GetCurrentContext()).ToLocalChecked());
 
   Nan::Set(target, Nan::New("Camera").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 }
