@@ -395,6 +395,21 @@ void GPCamera::capturePreview(take_picture_request *req) {
   if (retval == GP_OK) {
     retval = gp_camera_capture_preview(req->camera, file, req->context);
   }
+
+  /* Fallback to downloading into buffer */
+  const char *data;
+  if (retval == GP_OK &&
+      req->target_path.empty() &&
+      req->socket_path.empty()) {
+    retval = gp_file_get_data_and_size(file, &data, &req->length);
+    if (retval == GP_OK && req->length != 0) {
+      /* `gp_file_free` will call `free` on `file->data` pointer, save data */
+      req->data = new char[req->length];
+      memmove(const_cast<char *>(req->data), data, req->length);
+    }
+    data = NULL;
+  }
+
   if (!req->target_path.empty() || !req->socket_path.empty()) {
     gp_file_free(file);
   }
