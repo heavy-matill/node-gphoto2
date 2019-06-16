@@ -410,9 +410,8 @@ void GPCamera::capturePreview(take_picture_request *req) {
     data = NULL;
   }
 
-  if (!req->target_path.empty() || !req->socket_path.empty()) {
-    gp_file_free(file);
-  }
+  gp_file_free(file);
+
   req->ret = retval;
 }
 
