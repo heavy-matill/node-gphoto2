@@ -2,7 +2,7 @@
   "author": "Leonhardt Wille <wille@riverlabs.de>",
   "name": "@nouvellecuisine/gphoto2",
   "description": "Node.js wrapper for libgphoto2",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "homepage": "https://github.com/nouvellecuisine/node-gphoto2",
   "keywords": [
     "photography",
