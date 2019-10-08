@@ -39,6 +39,7 @@ NAN_MODULE_INIT(GPCamera::Initialize) {
   Nan::SetPrototypeMethod(tpl, "setConfigValue", SetConfigValue);
   Nan::SetPrototypeMethod(tpl, "takePicture", TakePicture);
   Nan::SetPrototypeMethod(tpl, "downloadPicture", DownloadPicture);
+  Nan::SetPrototypeMethod(tpl, "waitEvent", WaitEvent);
 
   constructor.Reset(tpl->GetFunction(Nan::GetCurrentContext()).ToLocalChecked());
 
@@ -49,7 +50,6 @@ NAN_METHOD(GPCamera::TakePicture) {
   GPCamera *camera = Nan::ObjectWrap::Unwrap<GPCamera>(info.Holder());
   camera->Ref();
   take_picture_request *picture_req;
-
   if (info.Length() >= 2) {
     REQ_OBJ_ARG(0, options);
     REQ_FUN_ARG(1, cb);
@@ -187,6 +187,52 @@ void GPCamera::Async_DownloadPicture(uv_work_t *_req) {
 
   req->cameraObject->lock();
   downloadPicture(req);
+  req->cameraObject->unlock();
+}
+
+NAN_METHOD(GPCamera::WaitEvent) {
+  REQ_OBJ_ARG(0, options);
+  REQ_FUN_ARG(1, cb);
+
+  GPCamera *camera = Nan::ObjectWrap::Unwrap<GPCamera>(info.This());
+  camera->Ref();
+  take_picture_request *picture_req = new take_picture_request();
+  picture_req->cb.Reset(cb);
+  picture_req->camera = camera->getCamera();
+  picture_req->cameraObject = camera;
+  picture_req->context = camera->gphoto_->getContext();
+  gp_context_ref(picture_req->context);
+
+  Nan::Maybe<bool> dlVal = MaybeGetValue<bool>(options, "download");
+  if (!dlVal.IsNothing()) {
+    picture_req->download = dlVal.FromJust();
+  }
+
+  Nan::Maybe<bool> keepVal = MaybeGetValue<bool>(options, "keep");
+  if (!keepVal.IsNothing()) {
+    picture_req->keep = keepVal.FromJust();
+  }
+
+  Nan::Maybe<int32_t> durationVal = MaybeGetValue<int32_t>(options, "duration");
+  if (!durationVal.IsNothing()) {
+    picture_req->duration = durationVal.FromJust();
+  }
+
+  v8::Local<v8::Value> target = options->Get(Nan::New("targetPath").ToLocalChecked());
+  if (target->IsString()) {
+    picture_req->target_path = std::string(*Nan::Utf8String(target));
+  }
+
+  gp_camera_ref(picture_req->camera);
+  DO_ASYNC(picture_req, Async_WaitEvent, Async_CaptureCb);
+  info.GetReturnValue().SetUndefined();
+}
+
+void GPCamera::Async_WaitEvent(uv_work_t *_req) {
+  take_picture_request *req = static_cast<take_picture_request *>(_req->data);
+
+  req->cameraObject->lock();
+  waitEvent(req);
   req->cameraObject->unlock();
 }
 

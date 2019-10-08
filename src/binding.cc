@@ -21,3 +21,8 @@ template<>
 bool HasType(const v8::Value* val, const bool* unused) {
   return val->IsBoolean();
 }
+
+template<>
+bool HasType(const v8::Value* val, const int32_t* unused) {
+  return val->IsInt32();
+}

@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -380,6 +381,87 @@ void GPCamera::downloadPicture(take_picture_request *req) {
   if (retval == GP_OK && !req->keep) {
     retval = gp_camera_file_delete(req->camera, folder.str().c_str(),
                                    name.c_str(), req->context);
+  }
+
+  gp_file_free(file);
+  req->ret = retval;
+}
+
+void GPCamera::waitEvent(take_picture_request *req) {
+  CameraEventType  event;
+  CameraFilePath  *fn;
+  struct timeval  xtime;
+  CameraFile *file;
+  void *data = NULL;
+  int retval;
+
+  gettimeofday(&xtime, NULL);
+
+  int waitTime = req->duration ? req->duration : 2000;
+  printf("Waiting for %d ms for events from camera\n", waitTime);
+
+  while (1) {
+    int     leftoverms = 1000;
+    struct timeval  ytime;
+    int    x, exitloop;
+
+    exitloop = 0;
+
+    gettimeofday(&ytime, NULL);
+
+    x = ((ytime.tv_usec-xtime.tv_usec)+(ytime.tv_sec-xtime.tv_sec)*1000000)/1000;
+    if (x >= waitTime) { exitloop = 1; break; }
+    /* if left over time is < 1s, set it... otherwise wait at most 1s */
+    if ((waitTime-x) < leftoverms)
+      leftoverms = waitTime-x;
+
+    if (exitloop) break;
+
+    data = NULL;
+    retval = gp_camera_wait_for_event(req->camera, leftoverms, &event, &data, req->context);
+    if (retval != GP_OK) {
+      printf("Error while waiting.");
+      req->ret = retval;
+      return;
+    }
+
+    if (event == GP_EVENT_FILE_ADDED) {
+      fn = reinterpret_cast<CameraFilePath*>(data);
+
+      if (!req->download) {
+        printf("FILEADDED %s %s\n", fn->name, fn->folder);
+        break;
+      }
+
+      retval = getCameraFile(req, &file);
+      if (retval != GP_OK) {
+        printf("Error creating file.");
+        req->ret = retval;
+        return;
+      }
+
+      retval = gp_camera_file_get(req->camera, fn->folder, fn->name,
+                                  GP_FILE_TYPE_NORMAL, file, req->context);
+      if (retval != GP_OK) {
+        printf("Error getting image file.");
+        req->ret = retval;
+        return;
+      }
+
+      if (!req->keep) {
+        retval = gp_camera_file_delete(req->camera, fn->folder,
+                                      fn->name, req->context);
+      }
+      if (retval != GP_OK) {
+        printf("Error deleting image file.");
+        req->ret = retval;
+        return;
+      } else {
+        // Return after saved image
+        break;
+      }
+    }
+    free(data);
   }
 
   gp_file_free(file);

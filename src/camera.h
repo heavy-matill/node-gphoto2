@@ -37,6 +37,7 @@ static v8::Persistent<v8::String> camera_getConfigValue_symbol;
 static v8::Persistent<v8::String> camera_setConfigValue_symbol;
 static v8::Persistent<v8::String> camera_takePicture_symbol;
 static v8::Persistent<v8::String> camera_downloadPicture_symbol;
+static v8::Persistent<v8::String> camera_waitEvent_symbol;
 
 class GPCamera : public Nan::ObjectWrap {
   uv_mutex_t cameraMutex;
@@ -71,6 +72,7 @@ class GPCamera : public Nan::ObjectWrap {
     bool download;
     bool preview;
     bool keep;
+    int32_t duration;  // Duration in ms for waitEvent method
     std::string path;
     std::string target_path;
     std::string socket_path;
@@ -108,6 +110,7 @@ class GPCamera : public Nan::ObjectWrap {
   static void takePicture(take_picture_request *req);
   static void capturePreview(take_picture_request *req);
   static void downloadPicture(take_picture_request *req);
+  static void waitEvent(take_picture_request *req);
   static int getCameraFile(take_picture_request *req, CameraFile **file);
   static v8::Local<v8::Object> convertSettingsToObject(bool minify, GPContext *context, const A<TreeNode>::Tree &node);
   static int convertValueForWidgetType(CameraWidget *child, set_config_request *req, void **value);
@@ -131,12 +134,14 @@ class GPCamera : public Nan::ObjectWrap {
   static NAN_METHOD(SetConfigValue);
   static NAN_METHOD(TakePicture);
   static NAN_METHOD(DownloadPicture);
+  static NAN_METHOD(WaitEvent);
 
   ASYNC_FN(Async_GetConfig);         // TODO(lwille): Rewrite using NanAsyncWorker
   ASYNC_CB(Async_GetConfigCb);       // TODO(lwille): Rewrite using NanAsyncWorker
   ASYNC_FN(Async_SetConfigValue);    // TODO(lwille): Rewrite using NanAsyncWorker
   ASYNC_CB(Async_SetConfigValueCb);  // TODO(lwille): Rewrite using NanAsyncWorker
   ASYNC_FN(Async_DownloadPicture);   // TODO(lwille): Rewrite using NanAsyncWorker
+  ASYNC_FN(Async_WaitEvent);         // TODO(lwille): Rewrite using NanAsyncWorker
   ASYNC_FN(Async_Capture);           // TODO(lwille): Rewrite using NanAsyncWorker
   ASYNC_CB(Async_CaptureCb);         // TODO(lwille): Rewrite using NanAsyncWorker
 
