@@ -403,19 +403,19 @@ void GPCamera::waitEvent(take_picture_request *req) {
   while (1) {
     int     leftoverms = 1000;
     struct timeval  ytime;
-    int    x, exitloop;
-
-    exitloop = 0;
+    int    x;
 
     gettimeofday(&ytime, NULL);
 
     x = ((ytime.tv_usec-xtime.tv_usec)+(ytime.tv_sec-xtime.tv_sec)*1000000)/1000;
-    if (x >= waitTime) { exitloop = 1; break; }
+    if (x >= waitTime) {
+      printf("Timed out before receiving a file.\n");
+      req->ret = GP_ERROR_TIMEOUT;
+      return;
+    }
     /* if left over time is < 1s, set it... otherwise wait at most 1s */
     if ((waitTime-x) < leftoverms)
       leftoverms = waitTime-x;
-
-    if (exitloop) break;
 
     data = NULL;
     retval = gp_camera_wait_for_event(req->camera, leftoverms, &event, &data, req->context);
