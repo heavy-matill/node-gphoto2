@@ -404,25 +404,23 @@ void GPCamera::waitEvent(take_picture_request *req) {
     int     leftoverms = 1000;
     struct timeval  ytime;
     int    x;
+    data = NULL;
 
     gettimeofday(&ytime, NULL);
 
     x = ((ytime.tv_usec-xtime.tv_usec)+(ytime.tv_sec-xtime.tv_sec)*1000000)/1000;
     if (x >= waitTime) {
       printf("Timed out before receiving a file.\n");
-      req->ret = GP_ERROR_TIMEOUT;
-      return;
+      break;
     }
     /* if left over time is < 1s, set it... otherwise wait at most 1s */
     if ((waitTime-x) < leftoverms)
       leftoverms = waitTime-x;
 
-    data = NULL;
     retval = gp_camera_wait_for_event(req->camera, leftoverms, &event, &data, req->context);
     if (retval != GP_OK) {
       printf("Error while waiting.");
-      req->ret = retval;
-      return;
+      break;
     }
 
     if (event == GP_EVENT_FILE_ADDED) {
@@ -436,16 +434,14 @@ void GPCamera::waitEvent(take_picture_request *req) {
       retval = getCameraFile(req, &file);
       if (retval != GP_OK) {
         printf("Error creating file.");
-        req->ret = retval;
-        return;
+        break;
       }
 
       retval = gp_camera_file_get(req->camera, fn->folder, fn->name,
                                   GP_FILE_TYPE_NORMAL, file, req->context);
       if (retval != GP_OK) {
         printf("Error getting image file.");
-        req->ret = retval;
-        return;
+        break;
       }
 
       if (!req->keep) {
@@ -454,8 +450,7 @@ void GPCamera::waitEvent(take_picture_request *req) {
       }
       if (retval != GP_OK) {
         printf("Error deleting image file.");
-        req->ret = retval;
-        return;
+        break;
       } else {
         // Return after saved image
         break;
@@ -464,6 +459,7 @@ void GPCamera::waitEvent(take_picture_request *req) {
     free(data);
   }
 
+  free(data);
   gp_file_free(file);
   req->ret = retval;
 }
