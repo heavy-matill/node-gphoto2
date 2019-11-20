@@ -391,7 +391,7 @@ void GPCamera::waitEvent(take_picture_request *req) {
   CameraEventType  event;
   CameraFilePath  *fn;
   struct timeval  xtime;
-  CameraFile *file;
+  CameraFile *file = NULL;
   void *data = NULL;
   int retval;
 
@@ -460,7 +460,10 @@ void GPCamera::waitEvent(take_picture_request *req) {
   }
 
   free(data);
-  gp_file_free(file);
+  if (file != NULL) {
+    gp_file_free(file);
+  }
+
   req->ret = retval;
 }
 
