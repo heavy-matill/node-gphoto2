@@ -206,7 +206,7 @@ int GPCamera::setWidgetValue(set_config_request *req) {
   ret = gp_widget_set_changed(child, 1);
   if (ret != GP_OK)
     goto finally;
-  ret = gp_camera_set_config(req->camera, rootconfig, req->context);
+  ret = gp_camera_set_single_config(req->camera, req->key.c_str(), rootconfig, req->context);
   if (ret != GP_OK)
     goto finally;
 
@@ -219,57 +219,10 @@ int GPCamera::getConfigWidget(GPContext *context, Camera *camera, std::string na
                               CameraWidget **child, CameraWidget **rootconfig) {
   int ret;
 
-  ret = gp_camera_get_config(camera, rootconfig, context);
-  if (ret != GP_OK) return ret;
+  ret = gp_camera_get_single_config(camera, name.c_str(), child, context);
+  *rootconfig = *child;
 
-  ret = gp_widget_get_child_by_name(*rootconfig, name.c_str(), child);
-  // name not found --> path specified
-  // recurse until the specified child is found
-  if (ret != GP_OK) {
-    char *part, *s, *newname;
-
-    newname = strdup(name.c_str());
-    if (!newname) return GP_ERROR_NO_MEMORY;
-
-    *child = *rootconfig;
-    part = newname;
-    while (part[0] == '/') {
-      part++;
-    }
-
-    while (1) {
-      CameraWidget *tmp;
-      s = strchr(part, '/');
-      if (s) {
-        *s = '\0';
-      }
-      ret = gp_widget_get_child_by_name(*child, part, &tmp);
-      if (ret != GP_OK) {
-        ret = gp_widget_get_child_by_label(*child, part, &tmp);
-      }
-      if (ret != GP_OK) {
-        break;
-      }
-      *child = tmp;
-      if (!s) { /* end of path */
-        break;
-      }
-      part = s + 1;
-      while (part[0] == '/') {
-        part++;
-      }
-    }
-
-    if (s) { /* if we have stuff left over, we failed */
-      gp_context_error(context, "%s not found in configuration tree.",
-                       newname);
-      free(newname);
-      gp_widget_free(*rootconfig);
-      return GP_ERROR;
-    }
-    free(newname);
-  }
-  return GP_OK;
+  return ret;
 }
 
 int GPCamera::enumConfig(get_config_request *req, CameraWidget *root,
